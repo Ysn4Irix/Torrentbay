@@ -1,11 +1,15 @@
 export const colors = {
-  background: '#F8FAFC',
-  foreground: '#0F172A',
-  muted: '#64748B',
-  primary: '#2563EB',
-  surface: '#FFFFFF',
-  border: '#E2E8F0',
-  danger: '#DC2626',
+  background: '#05070C',
+  foreground: '#F8FAFC',
+  muted: '#A8B3C2',
+  primary: '#8B3DFF',
+  primarySoft: '#A855F7',
+  surface: '#101720',
+  surfaceElevated: '#151E29',
+  border: '#223040',
+  danger: '#F97366',
+  seeders: '#4ADE80',
+  leechers: '#F97366',
 } as const;
 
 export const spacing = {

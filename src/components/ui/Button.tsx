@@ -23,7 +23,7 @@ export const Button = forwardRef<ComponentRef<typeof Pressable>, ButtonProps>(
         disabled={disabled}
         {...props}
       >
-        <Text className="font-semibold text-white">{label}</Text>
+        <Text className="font-semibold text-foreground">{label}</Text>
       </Pressable>
     );
   },

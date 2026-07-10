@@ -1,5 +1,5 @@
-import * as cheerio from 'cheerio';
-import { CheerioAPI } from 'cheerio';
+import * as cheerio from 'cheerio/slim';
+import { CheerioAPI } from 'cheerio/slim';
 
 import {
   PIRATE_BAY_BASE_URL,
@@ -248,11 +248,24 @@ function extractUploader(
   );
 }
 
+function extractTrailingIntegerCell(
+  row: TorrentRow,
+  offsetFromEnd: number,
+): number | undefined {
+  const numericCells = row
+    .find('td')
+    .toArray()
+    .map((cell) => parseInteger(row.find(cell).text()))
+    .filter((value): value is number => value !== undefined);
+
+  return numericCells[numericCells.length - 1 - offsetFromEnd];
+}
+
 function extractSeeders(row: TorrentRow): number | undefined {
   return (
     parseInteger(
       row.find('.seeders, [data-testid="seeders"]').first().text(),
-    ) ?? parseInteger(row.children('td').eq(-2).text())
+    ) ?? extractTrailingIntegerCell(row, 1)
   );
 }
 
@@ -260,7 +273,7 @@ function extractLeechers(row: TorrentRow): number | undefined {
   return (
     parseInteger(
       row.find('.leechers, [data-testid="leechers"]').first().text(),
-    ) ?? parseInteger(row.children('td').eq(-1).text())
+    ) ?? extractTrailingIntegerCell(row, 0)
   );
 }
 

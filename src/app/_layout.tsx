@@ -5,14 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { APP_NAME } from '@/constants/app';
 import { colors } from '@/constants/theme';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1 bg-background">
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.background },
@@ -22,14 +21,15 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="home" options={{ title: APP_NAME }} />
-          <Stack.Screen name="search" options={{ title: 'Search Results' }} />
+          <Stack.Screen name="home" options={{ headerShown: false }} />
+          <Stack.Screen name="search" options={{ headerShown: false }} />
+          <Stack.Screen name="history" options={{ headerShown: false }} />
           <Stack.Screen
             name="torrent/[id]"
             options={{ title: 'Torrent Details' }}
           />
-          <Stack.Screen name="favorites" options={{ title: 'Favorites' }} />
-          <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+          <Stack.Screen name="favorites" options={{ headerShown: false }} />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
