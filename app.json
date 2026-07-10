@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "TorrentBay",
+    "slug": "torrentbay",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "torrentbay",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.torrentbay.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
