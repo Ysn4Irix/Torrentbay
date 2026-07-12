@@ -9,6 +9,45 @@ const torrent = {
   name: 'Result',
 };
 
+const apiRows = [
+  {
+    id: '1',
+    name: 'Charlie',
+    info_hash: '0123456789abcdef0123456789abcdef01234567',
+    leechers: '9',
+    seeders: '30',
+    size: '300',
+    username: 'carol',
+    added: '1704240000',
+    status: 'member',
+    category: '200',
+  },
+  {
+    id: '2',
+    name: 'Alpha',
+    info_hash: 'abcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    leechers: '5',
+    seeders: '10',
+    size: '100',
+    username: 'alice',
+    added: '1704067200',
+    status: 'trusted',
+    category: '101',
+  },
+  {
+    id: '3',
+    name: 'Bravo',
+    info_hash: '1111111111111111111111111111111111111111',
+    leechers: '20',
+    seeders: '20',
+    size: '200',
+    username: 'bob',
+    added: '1704153600',
+    status: 'vip',
+    category: '201',
+  },
+];
+
 describe('searchTorrents', () => {
   test('composes URL builder, HTTP client, and parser dependencies', async () => {
     const urls: string[] = [];
@@ -22,7 +61,7 @@ describe('searchTorrents', () => {
     const response = await searchTorrents(
       {
         query: 'ubuntu',
-        page: 2,
+        page: 1,
         category: 'applications',
         sort: 'uploaded_desc',
       },
@@ -35,10 +74,10 @@ describe('searchTorrents', () => {
       },
     );
 
-    expect(urls).toEqual(['https://thepiratebay.org/search/ubuntu/1/3/300']);
+    expect(urls).toEqual(['https://apibay.org/q.php?q=ubuntu&cat=300']);
     expect(response).toEqual({
       query: 'ubuntu',
-      page: 2,
+      page: 1,
       category: 'applications',
       sort: 'uploaded_desc',
       results: [torrent],
@@ -110,5 +149,107 @@ describe('searchTorrents', () => {
         },
       ),
     ).rejects.toBe(parserError);
+  });
+
+  test('fetches and parses Apibay JSON by default', async () => {
+    const urls: string[] = [];
+    const httpClient: HttpClient = {
+      async get() {
+        throw new Error('unexpected text fetch');
+      },
+      async getJson(url) {
+        urls.push(url);
+        return apiRows;
+      },
+    };
+
+    const response = await searchTorrents(
+      { query: 'linux iso', category: 'all' },
+      { httpClient },
+    );
+
+    expect(urls).toEqual(['https://apibay.org/q.php?q=linux+iso&cat=0']);
+    expect(response.results).toHaveLength(3);
+    expect(response.results[0]).toMatchObject({
+      id: '1',
+      name: 'Charlie',
+      category: 'Video',
+      size: '300 B',
+      seeders: 30,
+      leechers: 9,
+      uploader: 'carol',
+      uploaded: '2024-01-03',
+    });
+  });
+
+  test('returns empty results for Apibay sentinel rows', async () => {
+    const response = await searchTorrents(
+      { query: 'missing' },
+      {
+        httpClient: {
+          async get() {
+            throw new Error('unexpected text fetch');
+          },
+          async getJson() {
+            return [{ id: '0', name: 'No results returned' }];
+          },
+        },
+      },
+    );
+
+    expect(response.results).toEqual([]);
+  });
+
+  test('paginates Apibay results app-side with 1-based public pages', async () => {
+    const results = Array.from({ length: 31 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Result ${index + 1}`,
+    }));
+
+    const response = await searchTorrents(
+      { query: 'ubuntu', page: 2 },
+      {
+        httpClient: {
+          async get() {
+            return 'fixture';
+          },
+        },
+        parser() {
+          return results;
+        },
+      },
+    );
+
+    expect(response.page).toBe(2);
+    expect(response.results).toEqual([{ id: '31', name: 'Result 31' }]);
+  });
+
+  test.each([
+    ['name_asc', ['Alpha', 'Bravo', 'Charlie']],
+    ['name_desc', ['Charlie', 'Bravo', 'Alpha']],
+    ['uploaded_desc', ['Charlie', 'Bravo', 'Alpha']],
+    ['uploaded_asc', ['Alpha', 'Bravo', 'Charlie']],
+    ['size_desc', ['Charlie', 'Bravo', 'Alpha']],
+    ['size_asc', ['Alpha', 'Bravo', 'Charlie']],
+    ['seeders_desc', ['Charlie', 'Bravo', 'Alpha']],
+    ['seeders_asc', ['Alpha', 'Bravo', 'Charlie']],
+    ['leechers_desc', ['Bravo', 'Charlie', 'Alpha']],
+    ['leechers_asc', ['Alpha', 'Charlie', 'Bravo']],
+  ] as const)('sorts Apibay results app-side by %s', async (sort, names) => {
+    const response = await searchTorrents(
+      { query: 'linux', sort },
+      {
+        httpClient: {
+          async get() {
+            throw new Error('unexpected text fetch');
+          },
+          async getJson() {
+            return apiRows;
+          },
+        },
+      },
+    );
+
+    expect(response.results.map((result) => result.name)).toEqual([...names]);
   });
 });

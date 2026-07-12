@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { buildPirateBaySearchUrl } from '@/services/scraper/pirateBayUrl';
+import {
+  buildApiBaySearchUrl,
+  buildPirateBaySearchUrl,
+} from '@/services/scraper/pirateBayUrl';
 import { ScraperError } from '@/services/scraper/scraperErrors';
 
 function expectScraperCode(fn: () => unknown, code: ScraperError['code']) {
@@ -85,6 +88,58 @@ describe('buildPirateBaySearchUrl', () => {
     expectScraperCode(
       () =>
         buildPirateBaySearchUrl({
+          query: 'x',
+          sort: 'newest' as never,
+        }),
+      'invalid_sort',
+    );
+  });
+});
+
+describe('buildApiBaySearchUrl', () => {
+  test('builds an Apibay q.php URL with encoded query and all category', () => {
+    expect(buildApiBaySearchUrl({ query: '  ubuntu iso  ' })).toBe(
+      'https://apibay.org/q.php?q=ubuntu+iso&cat=0',
+    );
+  });
+
+  test('uses existing TPB numeric category mappings and ignores pagination/sort in URL', () => {
+    expect(
+      buildApiBaySearchUrl({
+        query: 'linux',
+        page: 3,
+        category: 'video',
+        sort: 'seeders_desc',
+      }),
+    ).toBe('https://apibay.org/q.php?q=linux&cat=200');
+  });
+
+  test('encodes URL-looking queries as query data', () => {
+    expect(buildApiBaySearchUrl({ query: 'https://evil.test/?q=x' })).toBe(
+      'https://apibay.org/q.php?q=https%3A%2F%2Fevil.test%2F%3Fq%3Dx&cat=0',
+    );
+  });
+
+  test('rejects invalid inputs with typed errors', () => {
+    expectScraperCode(
+      () => buildApiBaySearchUrl({ query: '   ' }),
+      'empty_query',
+    );
+    expectScraperCode(
+      () => buildApiBaySearchUrl({ query: 'x', page: 0 }),
+      'invalid_page',
+    );
+    expectScraperCode(
+      () =>
+        buildApiBaySearchUrl({
+          query: 'x',
+          category: 'documentaries' as never,
+        }),
+      'invalid_category',
+    );
+    expectScraperCode(
+      () =>
+        buildApiBaySearchUrl({
           query: 'x',
           sort: 'newest' as never,
         }),

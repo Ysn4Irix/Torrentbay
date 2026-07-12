@@ -1,4 +1,5 @@
 import {
+  APIBAY_BASE_URL,
   PIRATE_BAY_BASE_URL,
   PIRATE_BAY_CATEGORY_MAP,
   PIRATE_BAY_SORT_MAP,
@@ -68,6 +69,16 @@ export function buildPirateBaySearchUrl(params: TorrentSearchParams): string {
     `/search/${encodedQuery}/${providerPage}/${sortCode}/${categoryCode}`,
     PIRATE_BAY_BASE_URL,
   );
+
+  return url.toString();
+}
+
+export function buildApiBaySearchUrl(params: TorrentSearchParams): string {
+  const normalized = normalizePirateBaySearchParams(params);
+  const url = new URL('/q.php', APIBAY_BASE_URL);
+
+  url.searchParams.set('q', normalized.query);
+  url.searchParams.set('cat', PIRATE_BAY_CATEGORY_MAP[normalized.category]);
 
   return url.toString();
 }

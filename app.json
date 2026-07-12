@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "torrentbay",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true

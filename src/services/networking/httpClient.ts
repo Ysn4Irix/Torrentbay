@@ -7,6 +7,7 @@ export type FetchTextOptions = {
 
 export type HttpClient = {
   get: (url: string, options?: FetchTextOptions) => Promise<string>;
+  getJson?: (url: string, options?: FetchTextOptions) => Promise<unknown>;
 };
 
 function mapHttpStatus(status: number): ScraperError {
@@ -111,6 +112,83 @@ export async function fetchText(
   }
 }
 
+export async function fetchJson<T = unknown>(
+  url: string,
+  options: FetchTextOptions = {},
+): Promise<T> {
+  const timeoutMs = options.timeoutMs ?? PIRATE_BAY_DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        accept: 'application/json,text/plain;q=0.9,*/*;q=0.1',
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw mapHttpStatus(response.status);
+    }
+
+    const contentType = response.headers.get('content-type');
+
+    if (
+      contentType &&
+      !/\b(application\/json|text\/plain)\b/i.test(contentType)
+    ) {
+      throw new ScraperError({
+        code: 'parse_failed',
+        message: 'The provider returned a non-JSON response.',
+      });
+    }
+
+    const text = await response.text();
+
+    if (!text.trim()) {
+      throw new ScraperError({
+        code: 'parse_failed',
+        message: 'The provider returned an empty JSON response.',
+        retryable: true,
+      });
+    }
+
+    return JSON.parse(text) as T;
+  } catch (error) {
+    if (error instanceof ScraperError) {
+      throw error;
+    }
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ScraperError({
+        code: 'timeout',
+        message: 'The provider request timed out.',
+        retryable: true,
+        cause: error,
+      });
+    }
+
+    if (error instanceof SyntaxError) {
+      throw new ScraperError({
+        code: 'parse_failed',
+        message: 'Failed to parse provider JSON.',
+        cause: error,
+      });
+    }
+
+    throw new ScraperError({
+      code: 'provider_unavailable',
+      message: 'The provider request failed.',
+      retryable: true,
+      cause: error,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const defaultHttpClient: HttpClient = {
   get: fetchText,
+  getJson: fetchJson,
 };

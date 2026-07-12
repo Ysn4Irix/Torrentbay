@@ -1,6 +1,10 @@
 export const PIRATE_BAY_BASE_URL = 'https://thepiratebay.org';
 
+export const APIBAY_BASE_URL = 'https://apibay.org';
+
 export const PIRATE_BAY_DEFAULT_TIMEOUT_MS = 10_000;
+
+export const APIBAY_SEARCH_PAGE_SIZE = 30;
 
 export const PIRATE_BAY_CATEGORY_MAP = {
   all: '0',

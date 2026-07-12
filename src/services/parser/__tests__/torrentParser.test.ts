@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
+import { parseApiBaySearchJson } from '@/services/parser/apibayParser';
 import { parseTorrentSearchHtml } from '@/services/parser/torrentParser';
 import { ScraperError } from '@/services/scraper/scraperErrors';
 
@@ -266,5 +267,133 @@ describe('parseTorrentSearchHtml', () => {
     expect(torrents[1]?.size).toBe('1.23 GiB');
     expect(torrents[1]?.seeders).toBe(1234);
     expect(torrents[1]?.leechers).toBe(0);
+  });
+});
+
+describe('parseApiBaySearchJson', () => {
+  test('maps Apibay records to torrent models', () => {
+    const torrents = parseApiBaySearchJson([
+      {
+        id: '123',
+        name: 'Ubuntu Desktop ISO',
+        info_hash: VALID_HASH,
+        leechers: '5',
+        seeders: '1234',
+        num_files: '1',
+        size: '2147483648',
+        username: 'alice',
+        added: '1704067200',
+        status: 'vip',
+        category: '303',
+        imdb: '',
+      },
+      {
+        id: '456',
+        name: 'Example Movie',
+        info_hash: SECOND_HASH.toUpperCase(),
+        leechers: '10',
+        seeders: '20',
+        num_files: '2',
+        size: '734003200',
+        username: 'bob',
+        added: '2024-02-03 04:05:06',
+        status: 'trusted',
+        category: '201',
+        imdb: 'tt1234567',
+      },
+    ]);
+
+    expect(torrents).toEqual([
+      {
+        id: '123',
+        name: 'Ubuntu Desktop ISO',
+        category: 'Applications',
+        subcategory: 'UNIX',
+        uploaded: '2024-01-01',
+        size: '2 GiB',
+        seeders: 1234,
+        leechers: 5,
+        uploader: 'alice',
+        magnet: `magnet:?xt=urn:btih:${VALID_HASH}&dn=Ubuntu%20Desktop%20ISO`,
+        detailsUrl: 'https://thepiratebay.org/description.php?id=123',
+        trusted: true,
+        vip: true,
+      },
+      {
+        id: '456',
+        name: 'Example Movie',
+        category: 'Video',
+        subcategory: 'Movies',
+        uploaded: '2024-02-03',
+        size: '700 MiB',
+        seeders: 20,
+        leechers: 10,
+        uploader: 'bob',
+        magnet: `magnet:?xt=urn:btih:${SECOND_HASH}&dn=Example%20Movie`,
+        detailsUrl: 'https://thepiratebay.org/description.php?id=456',
+        trusted: true,
+        vip: false,
+      },
+    ]);
+  });
+
+  test('returns an empty list for Apibay empty sentinel rows', () => {
+    expect(
+      parseApiBaySearchJson([
+        {
+          id: '0',
+          name: 'No results returned',
+          info_hash: '',
+          seeders: '0',
+          leechers: '0',
+          size: '0',
+        },
+      ]),
+    ).toEqual([]);
+  });
+
+  test('skips invalid Apibay rows without over-filtering valid rows', () => {
+    const torrents = parseApiBaySearchJson([
+      {
+        id: '1',
+        name: '',
+        info_hash: VALID_HASH,
+        size: '1',
+      },
+      {
+        id: '2',
+        name: 'Bad Hash',
+        info_hash: 'not-a-hash',
+        size: '1',
+      },
+      {
+        id: '3',
+        name: 'Bad Size',
+        info_hash: VALID_HASH,
+        size: '-1',
+      },
+      {
+        id: '',
+        name: 'Hash Fallback',
+        info_hash: VALID_HASH,
+        size: '1',
+      },
+    ]);
+
+    expect(torrents).toHaveLength(1);
+    expect(torrents[0]?.id).toBe(`btih-${VALID_HASH}`);
+    expect(torrents[0]?.size).toBe('1 B');
+  });
+
+  test('rejects non-array Apibay payloads with a typed error', () => {
+    try {
+      parseApiBaySearchJson({ ok: true });
+    } catch (error) {
+      expect(error).toBeInstanceOf(ScraperError);
+      expect((error as ScraperError).code).toBe('parse_failed');
+      return;
+    }
+
+    throw new Error('Expected parse_failed');
   });
 });
