@@ -81,6 +81,10 @@ describe('searchTorrents', () => {
       category: 'applications',
       sort: 'uploaded_desc',
       results: [torrent],
+      totalResults: 1,
+      pageSize: 30,
+      totalPages: 1,
+      hasNextPage: false,
     });
   });
 
@@ -222,6 +226,67 @@ describe('searchTorrents', () => {
 
     expect(response.page).toBe(2);
     expect(response.results).toEqual([{ id: '31', name: 'Result 31' }]);
+    expect(response.totalResults).toBe(31);
+    expect(response.totalPages).toBe(2);
+    expect(response.hasNextPage).toBe(false);
+  });
+
+  test('filters mature parser results before paginating when disabled', async () => {
+    const results = [
+      ...Array.from({ length: 30 }, (_, index) => ({
+        id: `adult-${index + 1}`,
+        name: `Adult ${index + 1}`,
+        category: 'Adult',
+      })),
+      { id: 'safe-1', name: 'Safe', category: 'Video' },
+    ];
+
+    const response = await searchTorrents(
+      { query: 'mixed' },
+      {
+        showMatureCategories: false,
+        httpClient: {
+          async get() {
+            return 'fixture';
+          },
+        },
+        parser() {
+          return results;
+        },
+      },
+    );
+
+    expect(response.results).toEqual([
+      { id: 'safe-1', name: 'Safe', category: 'Video' },
+    ]);
+    expect(response.totalResults).toBe(1);
+    expect(response.hasNextPage).toBe(false);
+  });
+
+  test('sorts before paginating app-side results', async () => {
+    const results = Array.from({ length: 31 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Result ${String(index + 1).padStart(2, '0')}`,
+      seeders: 31 - index,
+    }));
+
+    const response = await searchTorrents(
+      { query: 'ubuntu', page: 2, sort: 'seeders_asc' },
+      {
+        httpClient: {
+          async get() {
+            return 'fixture';
+          },
+        },
+        parser() {
+          return results;
+        },
+      },
+    );
+
+    expect(response.results).toEqual([
+      { id: '1', name: 'Result 01', seeders: 31 },
+    ]);
   });
 
   test.each([

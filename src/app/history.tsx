@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { ArrowLeft, Clock3, Search, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, SectionList, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,8 @@ import { getSearchFilterSortLabel } from '@/features/search/components/SearchFil
 import { getSearchCategoryLabel } from '@/features/search/constants';
 import { HistoryEntry, useHistoryStore } from '@/store/historyStore';
 import { useSearchStore } from '@/store/searchStore';
+import { useSettingsStore } from '@/store/settingsStore';
+import { isMatureCategory } from '@/utils/torrentMaturity';
 
 type HistorySection = {
   title: string;
@@ -65,6 +67,9 @@ export default function HistoryScreen() {
   const setInputQuery = useSearchStore((state) => state.setInputQuery);
   const setCategory = useSearchStore((state) => state.setCategory);
   const setSort = useSearchStore((state) => state.setSort);
+  const showMatureCategories = useSettingsStore(
+    (state) => state.showMatureCategories,
+  );
   const [removedEntry, setRemovedEntry] = useState<HistoryEntry | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -101,6 +106,14 @@ export default function HistoryScreen() {
     setShowClearConfirm(false);
   }
 
+  const visibleHistory = useMemo(
+    () =>
+      showMatureCategories
+        ? history
+        : history.filter((entry) => !isMatureCategory(entry.category)),
+    [history, showMatureCategories],
+  );
+
   return (
     <View className="flex-1 bg-background">
       <Screen contentClassName="px-0 py-0" scroll={false}>
@@ -123,7 +136,7 @@ export default function HistoryScreen() {
                     Replay saved searches with their filters.
                   </Text>
                 </View>
-                {history.length > 0 ? (
+                {visibleHistory.length > 0 ? (
                   <IconButton
                     accessibilityLabel="Clear search history"
                     onPress={() => setShowClearConfirm(true)}
@@ -191,7 +204,7 @@ export default function HistoryScreen() {
               </Text>
             </View>
           )}
-          sections={groupHistory(history)}
+          sections={groupHistory(visibleHistory)}
           stickySectionHeadersEnabled={false}
         />
       </Screen>

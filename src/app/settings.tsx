@@ -79,11 +79,17 @@ export default function SettingsScreen() {
   const confirmBeforeOpeningMagnetLinks = useSettingsStore(
     (state) => state.confirmBeforeOpeningMagnetLinks,
   );
+  const openProviderPagesExternally = useSettingsStore(
+    (state) => state.openProviderPagesExternally,
+  );
   const setShowMatureCategories = useSettingsStore(
     (state) => state.setShowMatureCategories,
   );
   const setConfirmBeforeOpeningMagnetLinks = useSettingsStore(
     (state) => state.setConfirmBeforeOpeningMagnetLinks,
+  );
+  const setOpenProviderPagesExternally = useSettingsStore(
+    (state) => state.setOpenProviderPagesExternally,
   );
   const clearHistory = useHistoryStore((state) => state.clearHistory);
   const clearFavorites = useFavoritesStore((state) => state.clearFavorites);
@@ -203,6 +209,25 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             description="Provider pages open in your external browser when selected."
+            right={
+              <Switch
+                accessibilityHint="Opens provider pages in your external browser when enabled."
+                accessibilityLabel="Open provider pages in external browser"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: openProviderPagesExternally }}
+                onValueChange={setOpenProviderPagesExternally}
+                thumbColor={
+                  openProviderPagesExternally
+                    ? colors.primary
+                    : colors.textMuted
+                }
+                trackColor={{
+                  false: colors.surfaceMuted,
+                  true: colors.primarySoft,
+                }}
+                value={openProviderPagesExternally}
+              />
+            }
             title="Open provider pages in external browser"
           />
         </Section>

@@ -37,7 +37,7 @@ export function CategoryGrid({
         <Chip
           accessibilityLabel={`Search ${category.label} torrents`}
           className="h-11 flex-none self-center"
-          hitSlop={{ bottom: 2, top: 2 }}
+          hitSlop={{ bottom: 2, top: 2, left: 4, right: 4 }}
           key={category.value}
           label={category.label}
           onPress={() => onSelect(category.value)}

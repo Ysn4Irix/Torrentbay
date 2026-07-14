@@ -352,6 +352,37 @@ describe('parseApiBaySearchJson', () => {
     ).toEqual([]);
   });
 
+  test('returns an empty list for empty Apibay arrays', () => {
+    expect(parseApiBaySearchJson([])).toEqual([]);
+  });
+
+  test('skips malformed Apibay rows and id zero sentinels', () => {
+    const torrents = parseApiBaySearchJson([
+      null,
+      'bad row',
+      42,
+      {
+        id: 0,
+        name: 'Sentinel with unexpected text',
+        info_hash: VALID_HASH,
+        size: '1',
+      },
+      {
+        id: '9',
+        name: 'Valid Row',
+        info_hash: SECOND_HASH,
+        size: '1024',
+      },
+    ]);
+
+    expect(torrents).toHaveLength(1);
+    expect(torrents[0]).toMatchObject({
+      id: '9',
+      name: 'Valid Row',
+      size: '1 KiB',
+    });
+  });
+
   test('skips invalid Apibay rows without over-filtering valid rows', () => {
     const torrents = parseApiBaySearchJson([
       {

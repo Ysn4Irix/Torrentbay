@@ -60,7 +60,7 @@ function mapKnownCode(
       return {
         kind: 'layout_changed',
         title: 'Results could not be read',
-        message: 'The provider page may have changed. Try again later.',
+        message: 'The provider response could not be read. Try again later.',
         retryable: true,
       };
     default:

@@ -6,6 +6,7 @@ import { persistentStorage } from '@/services/storage/persistentStorage';
 export type AppSettings = {
   showMatureCategories: boolean;
   confirmBeforeOpeningMagnetLinks: boolean;
+  openProviderPagesExternally: boolean;
   magnetNoticeAcknowledged: boolean;
 };
 
@@ -15,6 +16,9 @@ type SettingsState = AppSettings & {
   setConfirmBeforeOpeningMagnetLinks: (
     confirmBeforeOpeningMagnetLinks: boolean,
   ) => void;
+  setOpenProviderPagesExternally: (
+    openProviderPagesExternally: boolean,
+  ) => void;
   acknowledgeMagnetNotice: () => void;
   resetSettings: () => void;
 };
@@ -22,6 +26,7 @@ type SettingsState = AppSettings & {
 export const defaultSettings: AppSettings = {
   showMatureCategories: false,
   confirmBeforeOpeningMagnetLinks: true,
+  openProviderPagesExternally: true,
   magnetNoticeAcknowledged: false,
 };
 
@@ -34,6 +39,8 @@ export const useSettingsStore = create<SettingsState>()(
         set({ showMatureCategories }),
       setConfirmBeforeOpeningMagnetLinks: (confirmBeforeOpeningMagnetLinks) =>
         set({ confirmBeforeOpeningMagnetLinks }),
+      setOpenProviderPagesExternally: (openProviderPagesExternally) =>
+        set({ openProviderPagesExternally }),
       acknowledgeMagnetNotice: () => set({ magnetNoticeAcknowledged: true }),
       resetSettings: () => set(defaultSettings),
     }),
@@ -43,6 +50,7 @@ export const useSettingsStore = create<SettingsState>()(
       partialize: (state) => ({
         showMatureCategories: state.showMatureCategories,
         confirmBeforeOpeningMagnetLinks: state.confirmBeforeOpeningMagnetLinks,
+        openProviderPagesExternally: state.openProviderPagesExternally,
         magnetNoticeAcknowledged: state.magnetNoticeAcknowledged,
       }),
     },

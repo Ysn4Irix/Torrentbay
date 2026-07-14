@@ -30,6 +30,7 @@ export type TorrentCardProps = {
   onMagnetPress?: (torrent: Torrent) => void;
   onFavoritePress?: (torrent: Torrent) => void;
   onOverflowPress?: (torrent: Torrent) => void;
+  showSwarmStats?: boolean;
 };
 
 function normalizeText(value?: string): string | undefined {
@@ -120,6 +121,7 @@ function TorrentCardComponent({
   onMagnetPress,
   onFavoritePress,
   onOverflowPress,
+  showSwarmStats = true,
 }: TorrentCardProps) {
   if (variant === 'skeleton' || !torrent) {
     return <TorrentCardSkeleton className={className} />;
@@ -161,8 +163,16 @@ function TorrentCardComponent({
                 <StatusBadge type="cached" />
               ) : null}
               <MetricPill compact type="size" value={size} />
-              <MetricPill compact type="seeders" value={torrent.seeders} />
-              <MetricPill compact type="leechers" value={torrent.leechers} />
+              {showSwarmStats ? (
+                <>
+                  <MetricPill compact type="seeders" value={torrent.seeders} />
+                  <MetricPill
+                    compact
+                    type="leechers"
+                    value={torrent.leechers}
+                  />
+                </>
+              ) : null}
             </View>
           </View>
           <FavoriteControl
@@ -209,7 +219,7 @@ function TorrentCardComponent({
       </View>
 
       <Text
-        className="mt-3 text-[17px] font-semibold leading-[23px]"
+        className="mt-3 text-[16px] font-semibold leading-[22px]"
         numberOfLines={2}
       >
         {title}

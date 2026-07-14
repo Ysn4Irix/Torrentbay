@@ -30,12 +30,10 @@ import { useHistoryStore } from '@/store/historyStore';
 import { useSearchStore } from '@/store/searchStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { cn } from '@/utils/cn';
-
-function isAdultTorrent(torrent: Torrent) {
-  return [torrent.category, torrent.subcategory].some(
-    (value) => value?.trim().toLowerCase() === 'adult',
-  );
-}
+import {
+  filterMatureTorrents,
+  isMatureCategory,
+} from '@/utils/torrentMaturity';
 
 function formatRelativeSearchDate(value: string) {
   const timestamp = new Date(value).getTime();
@@ -85,14 +83,11 @@ export default function HomeScreen() {
     () =>
       showMatureCategories
         ? history
-        : history.filter((entry) => entry.category !== 'adult'),
+        : history.filter((entry) => !isMatureCategory(entry.category)),
     [history, showMatureCategories],
   );
   const visibleFavorites = useMemo(
-    () =>
-      showMatureCategories
-        ? favorites
-        : favorites.filter((torrent) => !isAdultTorrent(torrent)),
+    () => filterMatureTorrents(favorites, showMatureCategories),
     [favorites, showMatureCategories],
   );
 
@@ -140,7 +135,10 @@ export default function HomeScreen() {
         <View className="flex-1 justify-between">
           <View>
             <View className="flex-row items-center justify-between">
-              <BrandWordmark size={32} />
+              <BrandWordmark
+                size={40}
+                textClassName="text-[22px] font-bold text-content-primary"
+              />
               <Link href="/settings" asChild>
                 <IconButton accessibilityLabel="Open settings">
                   <Settings color={colors.textPrimary} size={20} />
@@ -151,6 +149,7 @@ export default function HomeScreen() {
             <View className="mt-4">
               <SearchInput
                 label="Search torrents"
+                labelClassName="text-[16px]"
                 onChangeText={setInputQuery}
                 onClear={clearInput}
                 onSubmit={() => openSearch()}
@@ -268,6 +267,7 @@ export default function HomeScreen() {
                       favorite
                       key={favorite.id}
                       onPress={openFavorite}
+                      showSwarmStats={false}
                       torrent={favorite}
                       variant="favorite"
                     />

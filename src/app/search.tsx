@@ -149,6 +149,7 @@ export default function SearchResultsScreen() {
   const category = useSearchStore((state) => state.category);
   const sort = useSearchStore((state) => state.sort);
   const results = useSearchStore((state) => state.results);
+  const hasNextPage = useSearchStore((state) => state.hasNextPage);
   const status = useSearchStore((state) => state.status);
   const error = useSearchStore((state) => state.error);
   const setInputQuery = useSearchStore((state) => state.setInputQuery);
@@ -529,7 +530,7 @@ export default function SearchResultsScreen() {
           />
           <Button
             className="flex-1"
-            disabled={results.length === 0 || status === 'loading'}
+            disabled={!hasNextPage || status === 'loading'}
             label="Next"
             onPress={() => goToPage(page + 1)}
           />
@@ -572,11 +573,13 @@ export default function SearchResultsScreen() {
               showsHorizontalScrollIndicator={false}
             >
               <Chip
+                accessibilityLabel={`Filter by category, ${selectedCategoryLabel}`}
                 label={selectedCategoryLabel}
                 onPress={() => setShowFilters(true)}
                 selected={category !== 'all'}
               />
               <Chip
+                accessibilityLabel={`Sort results, ${selectedSortLabel}`}
                 label={`Sort: ${selectedSortLabel}`}
                 onPress={() => setShowFilters(true)}
                 selected={sort !== 'relevance'}
@@ -585,7 +588,7 @@ export default function SearchResultsScreen() {
                 accessibilityLabel="Open filters"
                 accessibilityRole="button"
                 className="min-h-10 flex-row items-center justify-center gap-2 rounded-sm border border-primary/40 bg-primary-soft px-4 py-2 active:opacity-85"
-                hitSlop={{ top: 4, bottom: 4 }}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                 onPress={() => setShowFilters(true)}
               >
                 <SlidersHorizontal color={colors.primary} size={17} />
@@ -655,6 +658,7 @@ export default function SearchResultsScreen() {
         >
           <Pressable
             accessibilityLabel="Dismiss result actions"
+            accessibilityRole="button"
             className="absolute inset-0"
             onPress={() => setOverflowTorrent(null)}
           />

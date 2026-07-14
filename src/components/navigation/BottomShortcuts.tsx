@@ -19,21 +19,18 @@ const shortcuts = [
     label: 'Home',
     href: '/home',
     Icon: Search,
-    a11y: 'Open Home',
   },
   {
     key: 'favorites',
     label: 'Favorites',
     href: '/favorites',
     Icon: Bookmark,
-    a11y: 'Open Favorites',
   },
   {
     key: 'settings',
     label: 'Settings',
     href: '/settings',
     Icon: Settings,
-    a11y: 'Open Settings',
   },
 ] as const;
 
@@ -45,14 +42,16 @@ export function BottomShortcuts({ active }: BottomShortcutsProps) {
       className="absolute left-4 right-4 flex-row items-center justify-between rounded-lg border border-border bg-surface/95 px-2 py-2 shadow-sm shadow-black/20"
       style={{ bottom: Math.max(insets.bottom, 16) }}
     >
-      {shortcuts.map(({ key, label, href, Icon, a11y }) => {
+      {shortcuts.map(({ key, label, href, Icon }) => {
         const selected = active === key;
 
         return (
           <Link asChild href={href} key={key}>
             <Pressable
-              accessibilityLabel={a11y}
-              accessibilityRole="button"
+              accessibilityLabel={
+                selected ? `${label}, current tab` : `Open ${label}`
+              }
+              accessibilityRole="tab"
               accessibilityState={{ selected }}
               className={cn(
                 'min-h-14 flex-1 items-center justify-center rounded-2xl',

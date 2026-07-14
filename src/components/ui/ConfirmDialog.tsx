@@ -38,6 +38,7 @@ export function ConfirmDialog({
       >
         <Pressable
           accessibilityLabel="Dismiss dialog"
+          accessibilityRole="button"
           className="absolute inset-0"
           onPress={onCancel}
         />

@@ -57,7 +57,10 @@ describe('mapScraperError', () => {
           message: 'Changed',
         }),
       ),
-    ).toMatchObject({ kind: 'layout_changed' });
+    ).toMatchObject({
+      kind: 'layout_changed',
+      message: 'The provider response could not be read. Try again later.',
+    });
 
     expect(mapScraperError(new Error('Unknown'))).toMatchObject({
       kind: 'unknown',

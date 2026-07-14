@@ -13,7 +13,14 @@ export const IconButton = forwardRef<
   ComponentRef<typeof Pressable>,
   IconButtonProps
 >(function IconButton(
-  { accessibilityLabel, children, className, disabled, ...props },
+  {
+    accessibilityLabel,
+    accessibilityState,
+    children,
+    className,
+    disabled,
+    ...props
+  },
   ref,
 ) {
   return (
@@ -21,7 +28,10 @@ export const IconButton = forwardRef<
       ref={ref}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
-      accessibilityState={{ disabled: disabled ?? undefined }}
+      accessibilityState={{
+        ...accessibilityState,
+        disabled: disabled || accessibilityState?.disabled,
+      }}
       className={cn(
         'h-12 w-12 items-center justify-center rounded-full border border-border bg-surface-muted',
         disabled

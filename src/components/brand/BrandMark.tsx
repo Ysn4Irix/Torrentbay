@@ -1,5 +1,5 @@
 import Svg, { Circle, Path } from 'react-native-svg';
-import { View } from 'react-native';
+import { View, type TextStyle } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/theme';
@@ -72,13 +72,21 @@ export function BrandWordmark({
   textClassName,
 }: BrandWordmarkProps) {
   const wordmarkClassName = textClassName ?? 'text-lg font-bold';
+  const wordmarkTextStyle: TextStyle = { fontWeight: '700' };
 
   return (
     <View className="flex-row items-center gap-3" accessibilityRole="header">
       <BrandMark size={size} color={color} backgroundColor={backgroundColor} />
-      <Text className={wordmarkClassName}>
-        <Text className={wordmarkClassName}>Torrent</Text>
-        <Text className={`${wordmarkClassName} text-primary`}>Bay</Text>
+      <Text className={wordmarkClassName} style={wordmarkTextStyle}>
+        <Text className={wordmarkClassName} style={wordmarkTextStyle}>
+          Torrent
+        </Text>
+        <Text
+          className={`${wordmarkClassName} text-primary`}
+          style={wordmarkTextStyle}
+        >
+          Bay
+        </Text>
       </Text>
     </View>
   );

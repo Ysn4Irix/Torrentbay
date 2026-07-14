@@ -57,6 +57,21 @@ describe('fetchText', () => {
 
     expect(error.retryable).toBe(true);
     expect(error.status).toBe(429);
+
+    mockFetch(async () => new Response('forbidden', { status: 403 }));
+    await expectScraperCode(
+      fetchText('https://thepiratebay.org/search/test/0/99/0'),
+      'forbidden',
+    );
+
+    mockFetch(async () => new Response('down', { status: 503 }));
+    const unavailableError = await expectScraperCode(
+      fetchText('https://thepiratebay.org/search/test/0/99/0'),
+      'provider_unavailable',
+    );
+
+    expect(unavailableError.retryable).toBe(true);
+    expect(unavailableError.status).toBe(503);
   });
 
   test('rejects empty and non-HTML responses', async () => {
@@ -132,5 +147,62 @@ describe('fetchJson', () => {
       fetchJson('https://apibay.org/q.php?q=test&cat=0'),
       'parse_failed',
     );
+  });
+
+  test('maps JSON rate limits, provider errors, non-JSON, empty, and timeout responses', async () => {
+    mockFetch(async () => new Response('too many', { status: 429 }));
+    const rateLimitedError = await expectScraperCode(
+      fetchJson('https://apibay.org/q.php?q=test&cat=0'),
+      'rate_limited',
+    );
+
+    expect(rateLimitedError.retryable).toBe(true);
+    expect(rateLimitedError.status).toBe(429);
+
+    mockFetch(async () => new Response('down', { status: 500 }));
+    const providerError = await expectScraperCode(
+      fetchJson('https://apibay.org/q.php?q=test&cat=0'),
+      'provider_unavailable',
+    );
+
+    expect(providerError.retryable).toBe(true);
+    expect(providerError.status).toBe(500);
+
+    mockFetch(
+      async () =>
+        new Response('<html></html>', {
+          headers: { 'content-type': 'text/html' },
+        }),
+    );
+    await expectScraperCode(
+      fetchJson('https://apibay.org/q.php?q=test&cat=0'),
+      'parse_failed',
+    );
+
+    mockFetch(async () => new Response('   '));
+    const emptyJsonError = await expectScraperCode(
+      fetchJson('https://apibay.org/q.php?q=test&cat=0'),
+      'parse_failed',
+    );
+
+    expect(emptyJsonError.retryable).toBe(true);
+
+    mockFetch(
+      (_, init) =>
+        new Promise<Response>((_, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            const error = new Error('Aborted');
+            error.name = 'AbortError';
+            reject(error);
+          });
+        }),
+    );
+
+    const timeoutError = await expectScraperCode(
+      fetchJson('https://apibay.org/q.php?q=test&cat=0', { timeoutMs: 1 }),
+      'timeout',
+    );
+
+    expect(timeoutError.retryable).toBe(true);
   });
 });

@@ -124,6 +124,7 @@ export function SearchFilterSheet({
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {categories.map((item) => (
                   <Chip
+                    accessibilityLabel={`${item.label} category`}
                     key={item.value}
                     className="min-h-10 px-3 py-1"
                     label={item.label}
@@ -141,6 +142,7 @@ export function SearchFilterSheet({
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {SORT_FIELDS.map((item) => (
                   <Chip
+                    accessibilityLabel={`${item.label} sort field`}
                     key={item.value}
                     className="min-h-10 px-3 py-1"
                     label={item.label}
@@ -164,6 +166,7 @@ export function SearchFilterSheet({
                 {SORT_DIRECTIONS.map((item) => (
                   <Pressable
                     key={item.value}
+                    accessibilityLabel={`${item.label} sort direction`}
                     accessibilityRole="button"
                     accessibilityState={{
                       selected: draftDirection === item.value,
@@ -174,7 +177,7 @@ export function SearchFilterSheet({
                         ? 'border-primary bg-primary-soft'
                         : 'border-border bg-surface-muted',
                     )}
-                    hitSlop={{ top: 4, bottom: 4 }}
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                     onPress={() =>
                       setDraftSort((current) => ({
                         ...current,

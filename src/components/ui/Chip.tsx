@@ -17,7 +17,9 @@ export const Chip = forwardRef<ComponentRef<typeof Pressable>, ChipProps>(
       selected = false,
       className,
       disabled,
-      hitSlop = { top: 4, bottom: 4 },
+      accessibilityLabel,
+      accessibilityState,
+      hitSlop = { top: 4, bottom: 4, left: 4, right: 4 },
       ...props
     },
     ref,
@@ -25,8 +27,13 @@ export const Chip = forwardRef<ComponentRef<typeof Pressable>, ChipProps>(
     return (
       <Pressable
         ref={ref}
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityRole="button"
-        accessibilityState={{ disabled: disabled ?? undefined, selected }}
+        accessibilityState={{
+          ...accessibilityState,
+          disabled: disabled || accessibilityState?.disabled,
+          selected,
+        }}
         className={cn(
           'h-10 min-w-12 items-center justify-center self-start rounded-sm border px-4 py-0',
           selected

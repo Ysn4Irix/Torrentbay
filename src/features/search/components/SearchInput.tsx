@@ -12,6 +12,7 @@ type SearchInputProps = {
   onClear: () => void;
   onSubmit: () => void;
   label?: string;
+  labelClassName?: string;
   placeholder?: string;
   autoFocus?: boolean;
   loading?: boolean;
@@ -25,6 +26,7 @@ export function SearchInput({
   onClear,
   onSubmit,
   label = 'Search torrents',
+  labelClassName,
   placeholder = 'Search torrents',
   autoFocus = false,
   loading = false,
@@ -32,12 +34,18 @@ export function SearchInput({
   variant = 'standard',
 }: SearchInputProps) {
   const canSubmit = value.trim().length > 0;
+  const isSubmitDisabled = !canSubmit || loading;
   const isCompact = variant === 'compact';
 
   return (
     <View>
       {!isCompact ? (
-        <Text className="mb-2 text-sm font-semibold text-content-secondary">
+        <Text
+          className={cn(
+            'mb-2 text-sm font-semibold text-content-secondary',
+            labelClassName,
+          )}
+        >
           {label}
         </Text>
       ) : null}
@@ -50,6 +58,7 @@ export function SearchInput({
         <Search color={colors.primary} size={isCompact ? 18 : 20} />
         <TextInput
           accessibilityLabel={label}
+          accessibilityHint="Enter a keyword, then use the search key or submit button to search."
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus={autoFocus}
@@ -75,18 +84,22 @@ export function SearchInput({
         ) : null}
         {showSubmitButton ? (
           <Pressable
-            accessibilityLabel="Submit search"
+            accessibilityLabel={
+              canSubmit ? `Search for ${value.trim()}` : 'Submit search'
+            }
             accessibilityRole="button"
-            accessibilityState={{ busy: loading, disabled: !canSubmit }}
+            accessibilityState={{ busy: loading, disabled: isSubmitDisabled }}
             className={cn(
               'ml-1 items-center justify-center rounded-md bg-primary',
               isCompact ? 'h-10 w-10' : 'h-12 w-12',
-              canSubmit
+              !isSubmitDisabled
                 ? 'active:bg-primary-pressed active:opacity-85'
                 : 'opacity-50',
             )}
-            disabled={!canSubmit}
-            hitSlop={isCompact ? 4 : undefined}
+            disabled={isSubmitDisabled}
+            hitSlop={
+              isCompact ? { top: 4, bottom: 4, left: 4, right: 4 } : undefined
+            }
             onPress={onSubmit}
           >
             {loading ? (

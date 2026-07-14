@@ -14,11 +14,13 @@ import {
   normalizePirateBaySearchParams,
 } from '@/services/scraper/pirateBayUrl';
 import { ScraperError } from '@/services/scraper/scraperErrors';
+import { filterMatureTorrents } from '@/utils/torrentMaturity';
 
 type SearchTorrentsDeps = {
   httpClient?: HttpClient;
   parser?: (payload: unknown) => TorrentSearchResponse['results'];
   urlBuilder?: (params: TorrentSearchParams) => string;
+  showMatureCategories?: boolean;
 };
 
 function parseJsonText(text: string): unknown {
@@ -182,11 +184,20 @@ export async function searchTorrents(
     : deps.parser
       ? await httpClient.get(url)
       : parseJsonText(await httpClient.get(url));
-  const results = (deps.parser ?? parseApiBaySearchJson)(payload);
+  const results = filterMatureTorrents(
+    (deps.parser ?? parseApiBaySearchJson)(payload),
+    deps.showMatureCategories ?? true,
+  );
   const sortedResults = sortTorrents(results, normalizedParams.sort);
+  const totalResults = sortedResults.length;
+  const totalPages = Math.ceil(totalResults / APIBAY_SEARCH_PAGE_SIZE);
 
   return {
     ...normalizedParams,
     results: paginateTorrents(sortedResults, normalizedParams.page),
+    totalResults,
+    pageSize: APIBAY_SEARCH_PAGE_SIZE,
+    totalPages,
+    hasNextPage: normalizedParams.page < totalPages,
   };
 }

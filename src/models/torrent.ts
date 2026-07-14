@@ -49,4 +49,8 @@ export type TorrentSearchResponse = {
   category: TorrentCategory;
   sort: TorrentSort;
   results: Torrent[];
+  totalResults?: number;
+  pageSize?: number;
+  totalPages?: number;
+  hasNextPage?: boolean;
 };

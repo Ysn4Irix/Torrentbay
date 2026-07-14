@@ -6,7 +6,7 @@
 > Framework: React Native + Expo
 > Language: TypeScript
 > Styling: NativeWind
-> Data Provider: The Pirate Bay (HTML Scraper)
+> Data Provider: Apibay (accepted provider backend for The Pirate Bay metadata)
 > Architecture: Clean Architecture
 
 ---
@@ -19,11 +19,17 @@ TorrentBay
 
 ## Goal
 
-TorrentBay is an Android application that allows users to search torrents from **The Pirate Bay** and display their metadata in a clean, fast, and modern interface.
+TorrentBay is an Android application that allows users to search torrent metadata sourced from **The Pirate Bay** through the accepted **Apibay** provider backend and display it in a clean, fast, and modern interface.
 
 The application **does not host torrents**, **does not store torrents**, and **does not download torrent files**.
 
-It only indexes publicly available information by scraping search result pages from The Pirate Bay.
+It only indexes publicly available torrent metadata from the accepted provider pipeline.
+
+## Accepted Scope Alignment
+
+- Apibay is an intentional accepted deviation from the original HTML-only scraper PRD, not a bug.
+- Automated coverage is unit/store/service focused; UI and navigation validation are handled through manual QA.
+- Release readiness means Expo doctor/install checks and Expo export. EAS build setup is out of scope.
 
 ---
 
@@ -34,7 +40,7 @@ Primary objectives:
 - Fast torrent searching
 - Lightweight UI
 - Clean Material-inspired design
-- Reliable HTML scraping
+- Reliable provider metadata retrieval
 - Minimal battery consumption
 - High performance
 - Native Android experience
@@ -60,9 +66,9 @@ Primary objectives:
 
 - Fetch API
 
-## HTML Parsing
+## Provider Metadata Parsing
 
-- Cheerio
+- JSON parsing and normalization
 
 ## State Management
 
@@ -205,11 +211,9 @@ Offline:
 
 ---
 
-# 7. HTML Scraper Requirements
+# 7. Provider Metadata Requirements
 
-The application **must not use any public API**.
-
-Only scrape publicly accessible HTML pages.
+The application uses Apibay as the accepted backend for The Pirate Bay torrent metadata. This replaces the original HTML-only/no-public-API requirement by explicit scope decision.
 
 Pipeline:
 
@@ -217,23 +221,23 @@ User Search
 
 ↓
 
-Generate Search URL
+Generate Provider Request
 
 ↓
 
-Download HTML
+Fetch Provider Metadata
 
 ↓
 
-Remove unnecessary elements
+Validate Response
 
 ↓
 
-Parse HTML
+Normalize Provider Fields
 
 ↓
 
-Extract Metadata
+Extract Torrent Metadata
 
 ↓
 
@@ -245,28 +249,28 @@ Display UI
 
 ---
 
-# 8. Anti-Ad Scraping Strategy
+# 8. Provider Data Hygiene Strategy
 
-The scraper should minimize unnecessary content and avoid processing advertisements while remaining compliant with applicable laws and the target site's terms of use.
+The provider pipeline should minimize unnecessary processing while remaining compliant with applicable laws and the target service's terms of use.
 
 Goals:
 
-- Fetch only the required HTML.
-- Ignore ad-related DOM elements during parsing.
-- Skip known advertisement containers, banners, iframes, sponsored sections, and tracking elements.
+- Fetch only the required provider metadata.
+- Ignore unrelated provider fields during normalization.
+- Do not process advertising, tracking, or unrelated payload fields when present.
 - Do not execute JavaScript.
 - Do not load external assets such as images, scripts, stylesheets, analytics, or advertising resources.
-- Extract only the HTML nodes required for torrent metadata.
-- Use strict CSS selectors targeting torrent result tables/lists.
+- Extract only fields required for torrent metadata.
+- Use strict mapping from provider fields to the app `Torrent` model.
 - Validate extracted data before returning it.
 
 Performance practices:
 
-- Parse only the relevant HTML subtree.
-- Remove unrelated nodes before extraction.
+- Parse only the relevant provider response fields.
+- Remove unrelated fields before model creation.
 - Avoid processing hidden or decorative elements.
 - Reuse parsing utilities where possible.
-- Fail gracefully if page structure changes.
+- Fail gracefully if the provider response structure changes.
 
 ---
 
@@ -391,11 +395,11 @@ Provider unavailable
 
 ↓
 
-Invalid HTML
+Invalid provider response
 
 ↓
 
-HTML layout changed
+Provider response changed
 
 ↓
 
@@ -425,17 +429,17 @@ Cache:
 - favorites
 - last successful search results (optional)
 
-Do not cache HTML pages long-term.
+Do not cache raw provider responses long-term.
 
 ---
 
 # 14. Security
 
-Never execute scraped JavaScript.
+Never execute provider-sourced JavaScript.
 
 Never inject HTML into the UI.
 
-Sanitize all scraped values.
+Sanitize all provider-sourced values.
 
 Validate every extracted field.
 
@@ -478,7 +482,7 @@ src/
         favorites/
         settings/
     services/
-        scraper/
+        provider/
         parser/
         networking/
     hooks/
@@ -508,22 +512,23 @@ src/
 
 # 19. Testing Strategy
 
-Unit tests:
+Automated coverage is unit-only and does not require UI test dependencies.
+
+Unit/store/service tests:
 
 - parser
 - models
 - utilities
-
-Integration tests:
-
-- scraping pipeline
 - state management
+- provider metadata services
+- favorites and persistence stores
 
-UI tests:
+Manual QA checklist:
 
 - search flow
 - favorites
 - navigation
+- accessibility labels, scalable text, touch targets, and high contrast compatibility
 
 ---
 
@@ -554,7 +559,7 @@ The application will **not**:
 - Include user accounts
 - Include cloud synchronization
 - Require authentication
-- Execute JavaScript from scraped pages
+- Execute JavaScript from provider data
 
 ---
 
@@ -562,15 +567,16 @@ The application will **not**:
 
 The application is considered complete when:
 
-- Users can search The Pirate Bay successfully.
+- Users can search The Pirate Bay metadata successfully through Apibay.
 - Torrent metadata is extracted accurately.
 - Search results are displayed quickly.
 - Favorites work locally.
 - Search history functions correctly.
-- The scraper ignores advertisement-related content and extracts only relevant torrent metadata.
-- The application handles provider layout changes gracefully.
+- The provider pipeline ignores unrelated content and extracts only relevant torrent metadata.
+- The application handles provider response changes gracefully.
 - The UI is responsive and performant.
 - NativeWind is used consistently for styling.
-- The project builds successfully with Expo.
+- Expo doctor/install checks and Expo export complete successfully.
+- EAS build setup is not required for this milestone.
 - The architecture remains modular, maintainable, and AI-agent-friendly.
 ````

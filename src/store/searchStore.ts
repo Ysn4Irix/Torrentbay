@@ -12,6 +12,11 @@ import {
   TorrentSort,
 } from '@/models/torrent';
 import { useHistoryStore } from '@/store/historyStore';
+import { useSettingsStore } from '@/store/settingsStore';
+import {
+  coerceMatureCategory,
+  filterMatureTorrents,
+} from '@/utils/torrentMaturity';
 
 type SearchStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
@@ -33,6 +38,8 @@ type SearchState = {
   category: TorrentCategory;
   sort: TorrentSort;
   results: Torrent[];
+  totalResults: number;
+  hasNextPage: boolean;
   status: SearchStatus;
   error: SearchErrorState | null;
   recentSearches: string[];
@@ -58,6 +65,8 @@ const initialSearchState = {
   category: 'all' as TorrentCategory,
   sort: 'relevance' as TorrentSort,
   results: [],
+  totalResults: 0,
+  hasNextPage: false,
   status: 'idle' as SearchStatus,
   error: null,
   recentSearches: [],
@@ -70,7 +79,9 @@ let nextRequestId = 0;
 const defaultSearchService: SearchService = async (params) => {
   const { searchTorrents } = await import('@/services/scraper/torrentSearch');
 
-  return searchTorrents(params);
+  return searchTorrents(params, {
+    showMatureCategories: useSettingsStore.getState().showMatureCategories,
+  });
 };
 let searchService: SearchService = defaultSearchService;
 let inFlightSearchKey: string | null = null;
@@ -99,6 +110,20 @@ function getSearchKey({
   sort,
 }: NormalizedSearchParams): string {
   return JSON.stringify([query.toLocaleLowerCase(), page, category, sort]);
+}
+
+function getSafeSearchCategory(category: TorrentCategory): TorrentCategory {
+  return coerceMatureCategory(
+    category,
+    useSettingsStore.getState().showMatureCategories,
+  );
+}
+
+function getFilteredSearchResults(results: Torrent[]): Torrent[] {
+  return filterMatureTorrents(
+    results,
+    useSettingsStore.getState().showMatureCategories,
+  );
 }
 
 export const useSearchStore = create<SearchState>((set) => ({
@@ -134,6 +159,8 @@ export const useSearchStore = create<SearchState>((set) => ({
         query: '',
         page: 1,
         results: [],
+        totalResults: 0,
+        hasNextPage: false,
         status: 'idle',
         error: null,
         activeRequestId: ++nextRequestId,
@@ -161,7 +188,7 @@ export const useSearchStore = create<SearchState>((set) => ({
             : state.currentSearchKey,
       };
     }),
-  setCategory: (category) => set({ category }),
+  setCategory: (category) => set({ category: getSafeSearchCategory(category) }),
   setSort: (sort) => set({ sort }),
   search: async (params = {}) => {
     const currentState = useSearchStore.getState();
@@ -179,6 +206,8 @@ export const useSearchStore = create<SearchState>((set) => ({
         query: '',
         page: 1,
         results: [],
+        totalResults: 0,
+        hasNextPage: false,
         status: 'idle',
         error: null,
         activeRequestId: ++nextRequestId,
@@ -189,7 +218,9 @@ export const useSearchStore = create<SearchState>((set) => ({
     }
 
     const page = params.page ?? currentState.page;
-    const category = params.category ?? currentState.category;
+    const category = getSafeSearchCategory(
+      params.category ?? currentState.category,
+    );
     const sort = params.sort ?? currentState.sort;
     const searchParams = { query, page, category, sort };
     const searchKey = getSearchKey(searchParams);
@@ -267,10 +298,20 @@ export const useSearchStore = create<SearchState>((set) => ({
         }
 
         const shouldRecordSearch = inFlightShouldCommit;
+        const results = getFilteredSearchResults(response.results);
+        const filteredResults = results.length !== response.results.length;
+        const totalResults = filteredResults
+          ? results.length
+          : (response.totalResults ?? results.length);
+        const hasNextPage = filteredResults
+          ? false
+          : (response.hasNextPage ?? false);
 
         set((state) => ({
-          results: response.results,
-          status: response.results.length > 0 ? 'success' : 'empty',
+          results,
+          totalResults,
+          hasNextPage,
+          status: totalResults > 0 ? 'success' : 'empty',
           error: null,
           activeRequestKey: null,
           currentSearchKey: searchKey,
@@ -289,6 +330,8 @@ export const useSearchStore = create<SearchState>((set) => ({
 
         set({
           results: [],
+          totalResults: 0,
+          hasNextPage: false,
           status: 'error',
           error: mapScraperError(error),
           activeRequestKey: null,
@@ -328,3 +371,36 @@ export function resetSearchServiceForTests() {
   nextRequestId = 0;
   clearInFlightSearch();
 }
+
+useSettingsStore.subscribe((settings, previousSettings) => {
+  if (settings.showMatureCategories || !previousSettings.showMatureCategories) {
+    return;
+  }
+
+  const state = useSearchStore.getState();
+  const category = coerceMatureCategory(state.category, false);
+  const results = filterMatureTorrents(state.results, false);
+
+  if (category === state.category && results.length === state.results.length) {
+    return;
+  }
+
+  clearInFlightSearch();
+  useSearchStore.setState({
+    category,
+    results,
+    totalResults: results.length,
+    hasNextPage: false,
+    status:
+      state.status === 'loading'
+        ? results.length > 0
+          ? 'success'
+          : 'idle'
+        : state.status === 'success' && results.length === 0
+          ? 'empty'
+          : state.status,
+    activeRequestId: ++nextRequestId,
+    activeRequestKey: null,
+    currentSearchKey: null,
+  });
+});

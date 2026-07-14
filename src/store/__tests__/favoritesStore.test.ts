@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
+import { persistentStorage } from '@/services/storage/persistentStorage';
 import { useFavoritesStore } from '@/store/favoritesStore';
 
 const torrent = {
@@ -8,6 +9,16 @@ const torrent = {
   category: 'Apps',
   seeders: 100,
 };
+
+async function readPersistedState<T>(key: string): Promise<T> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  const raw = await persistentStorage.getItem(key);
+
+  expect(raw).toBeString();
+
+  return JSON.parse(raw as string).state as T;
+}
 
 describe('favoritesStore', () => {
   afterEach(() => {
@@ -48,5 +59,22 @@ describe('favoritesStore', () => {
     expect(useFavoritesStore.getState().favorites).toHaveLength(1);
     useFavoritesStore.getState().clearFavorites();
     expect(useFavoritesStore.getState().favorites).toEqual([]);
+  });
+
+  test('persists only favorite entries with cached metadata', async () => {
+    useFavoritesStore.getState().addFavorite(torrent);
+
+    const persisted = await readPersistedState<{
+      favorites: { id: string; name: string; savedAt: string }[];
+      isFavorite?: unknown;
+    }>('torrentbay:favorites');
+
+    expect(persisted.favorites).toHaveLength(1);
+    expect(persisted.favorites[0]).toMatchObject({
+      id: 'torrent-1',
+      name: 'Ubuntu Desktop ISO',
+    });
+    expect(persisted.favorites[0]?.savedAt).toBeString();
+    expect(persisted.isFavorite).toBeUndefined();
   });
 });

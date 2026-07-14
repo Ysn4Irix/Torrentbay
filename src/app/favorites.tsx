@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Bookmark, Search, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, ListRenderItemInfo, View } from 'react-native';
 
 import { BottomShortcuts } from '@/components/navigation/BottomShortcuts';
@@ -16,6 +16,8 @@ import { colors } from '@/constants/theme';
 import { TorrentCard } from '@/features/torrents/components/TorrentCard';
 import { Torrent } from '@/models/torrent';
 import { FavoriteEntry, useFavoritesStore } from '@/store/favoritesStore';
+import { useSettingsStore } from '@/store/settingsStore';
+import { filterMatureTorrents } from '@/utils/torrentMaturity';
 
 type FavoriteSort = 'recent' | 'name' | 'seeders' | 'category';
 
@@ -49,6 +51,9 @@ export default function FavoritesScreen() {
   const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
   const restoreFavorite = useFavoritesStore((state) => state.restoreFavorite);
   const clearFavorites = useFavoritesStore((state) => state.clearFavorites);
+  const showMatureCategories = useSettingsStore(
+    (state) => state.showMatureCategories,
+  );
   const [sort, setSort] = useState<FavoriteSort>('recent');
   const [removedFavorite, setRemovedFavorite] = useState<FavoriteEntry | null>(
     null,
@@ -78,7 +83,11 @@ export default function FavoritesScreen() {
     setShowClearConfirm(false);
   }
 
-  const sortedFavorites = sortFavorites(favorites, sort);
+  const visibleFavorites = useMemo(
+    () => filterMatureTorrents(favorites, showMatureCategories),
+    [favorites, showMatureCategories],
+  );
+  const sortedFavorites = sortFavorites(visibleFavorites, sort);
 
   return (
     <View className="flex-1 bg-background">
@@ -98,7 +107,7 @@ export default function FavoritesScreen() {
                     </Text>
                   </View>
                 </View>
-                {favorites.length > 0 ? (
+                {visibleFavorites.length > 0 ? (
                   <IconButton
                     accessibilityLabel="Clear favorites"
                     onPress={() => setShowClearConfirm(true)}
@@ -108,7 +117,7 @@ export default function FavoritesScreen() {
                 ) : null}
               </View>
 
-              {favorites.length > 0 ? (
+              {visibleFavorites.length > 0 ? (
                 <>
                   <Card className="mt-5 border-info/35 p-4 shadow-none">
                     <Text className="text-sm leading-[20px] text-content-secondary">

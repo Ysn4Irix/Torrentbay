@@ -7,11 +7,15 @@ import {
 } from '@/store/searchStore';
 import { ScraperError } from '@/services/scraper/scraperErrors';
 import { useHistoryStore } from '@/store/historyStore';
+import { useSettingsStore } from '@/store/settingsStore';
 
 const torrent = { id: 'fixture-1', name: 'Fixture result' };
+const safeTorrent = { id: 'safe-1', name: 'Safe result', category: 'Video' };
+const adultTorrent = { id: 'adult-1', name: 'Adult result', category: 'Adult' };
 
 describe('searchStore', () => {
   afterEach(() => {
+    useSettingsStore.getState().resetSettings();
     useSearchStore.getState().reset();
     useHistoryStore.getState().clearHistory();
     resetSearchServiceForTests();
@@ -37,6 +41,74 @@ describe('searchStore', () => {
     expect(useHistoryStore.getState().history).toMatchObject([
       { query: 'ubuntu', category: 'all', sort: 'relevance' },
     ]);
+  });
+
+  test('filters adult results from mixed results when mature content is disabled', async () => {
+    setSearchServiceForTests(async (params) => ({
+      query: params.query,
+      page: params.page ?? 1,
+      category: params.category ?? 'all',
+      sort: params.sort ?? 'relevance',
+      results: [safeTorrent, adultTorrent],
+    }));
+
+    await useSearchStore.getState().search({ query: 'mixed' });
+
+    expect(useSearchStore.getState()).toMatchObject({
+      status: 'success',
+      results: [safeTorrent],
+      totalResults: 1,
+      hasNextPage: false,
+    });
+  });
+
+  test('keeps adult results when mature content is enabled', async () => {
+    useSettingsStore.getState().setShowMatureCategories(true);
+    setSearchServiceForTests(async (params) => ({
+      query: params.query,
+      page: params.page ?? 1,
+      category: params.category ?? 'all',
+      sort: params.sort ?? 'relevance',
+      results: [safeTorrent, adultTorrent],
+    }));
+
+    await useSearchStore.getState().search({ query: 'mixed' });
+
+    expect(useSearchStore.getState()).toMatchObject({
+      status: 'success',
+      results: [safeTorrent, adultTorrent],
+      totalResults: 2,
+    });
+  });
+
+  test('coerces adult category safely when mature content is disabled', async () => {
+    const categories: string[] = [];
+
+    useSettingsStore.getState().setShowMatureCategories(true);
+    useSearchStore.getState().setCategory('adult');
+    useSettingsStore.getState().setShowMatureCategories(false);
+
+    setSearchServiceForTests(async (params) => {
+      categories.push(params.category ?? 'all');
+
+      return {
+        query: params.query,
+        page: params.page ?? 1,
+        category: params.category ?? 'all',
+        sort: params.sort ?? 'relevance',
+        results: [adultTorrent],
+      };
+    });
+
+    await useSearchStore.getState().search({ query: 'adult' });
+
+    expect(categories).toEqual(['all']);
+    expect(useSearchStore.getState()).toMatchObject({
+      category: 'all',
+      status: 'empty',
+      results: [],
+      totalResults: 0,
+    });
   });
 
   test('prevents stale responses from overwriting newer searches', async () => {
@@ -251,6 +323,69 @@ describe('searchStore', () => {
     });
   });
 
+  test('maps service errors into retryable search error state', async () => {
+    setSearchServiceForTests(async () => {
+      throw new ScraperError({
+        code: 'rate_limited',
+        message: 'Too many searches',
+        retryable: true,
+        status: 429,
+      });
+    });
+
+    await useSearchStore.getState().search({ query: 'ubuntu' });
+
+    expect(useSearchStore.getState()).toMatchObject({
+      query: 'ubuntu',
+      status: 'error',
+      results: [],
+      error: {
+        kind: 'rate_limited',
+        retryable: true,
+      },
+    });
+  });
+
+  test('retry uses preserved failed search params and forces a refetch', async () => {
+    const calls: string[] = [];
+
+    setSearchServiceForTests(async (params) => {
+      calls.push(`${params.query}:${params.category}:${params.sort}`);
+
+      if (calls.length === 1) {
+        throw new ScraperError({
+          code: 'timeout',
+          message: 'Timed out',
+          retryable: true,
+        });
+      }
+
+      return {
+        query: params.query,
+        page: params.page ?? 1,
+        category: params.category ?? 'all',
+        sort: params.sort ?? 'relevance',
+        results: [torrent],
+      };
+    });
+
+    await useSearchStore.getState().search({
+      query: 'ubuntu',
+      category: 'applications',
+      sort: 'seeders_desc',
+    });
+    await useSearchStore.getState().retry();
+
+    expect(calls).toEqual([
+      'ubuntu:applications:seeders_desc',
+      'ubuntu:applications:seeders_desc',
+    ]);
+    expect(useSearchStore.getState()).toMatchObject({
+      status: 'success',
+      results: [torrent],
+    });
+  });
+
   test('retry bypasses a successful current search skip', async () => {
     let calls = 0;
 
@@ -308,6 +443,65 @@ describe('searchStore', () => {
       query: 'submitted',
       sort: 'seeders_desc',
       page: 2,
+    });
+  });
+
+  test('tracks final partial page without marking it empty', async () => {
+    const results = Array.from({ length: 31 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Result ${index + 1}`,
+    }));
+
+    setSearchServiceForTests(async (params) => {
+      const page = params.page ?? 1;
+      const start = (page - 1) * 30;
+
+      return {
+        query: params.query,
+        page,
+        category: params.category ?? 'all',
+        sort: params.sort ?? 'relevance',
+        results: results.slice(start, start + 30),
+        totalResults: results.length,
+        pageSize: 30,
+        totalPages: 2,
+        hasNextPage: page < 2,
+      };
+    });
+
+    await useSearchStore.getState().search({ query: 'ubuntu' });
+    await useSearchStore.getState().search({ page: 2 });
+
+    expect(useSearchStore.getState()).toMatchObject({
+      page: 2,
+      status: 'success',
+      results: [{ id: '31', name: 'Result 31' }],
+      totalResults: 31,
+      hasNextPage: false,
+    });
+  });
+
+  test('only marks searches empty when the total result count is zero', async () => {
+    setSearchServiceForTests(async (params) => ({
+      query: params.query,
+      page: params.page ?? 1,
+      category: params.category ?? 'all',
+      sort: params.sort ?? 'relevance',
+      results: [],
+      totalResults: 1,
+      pageSize: 30,
+      totalPages: 1,
+      hasNextPage: false,
+    }));
+
+    await useSearchStore.getState().search({ query: 'ubuntu', page: 2 });
+
+    expect(useSearchStore.getState()).toMatchObject({
+      page: 2,
+      status: 'success',
+      results: [],
+      totalResults: 1,
+      hasNextPage: false,
     });
   });
 

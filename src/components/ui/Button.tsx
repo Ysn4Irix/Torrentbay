@@ -47,6 +47,7 @@ export const Button = forwardRef<ComponentRef<typeof Pressable>, ButtonProps>(
       loading = false,
       leftIcon,
       variant = 'primary',
+      accessibilityLabel,
       accessibilityState,
       ...props
     },
@@ -57,6 +58,7 @@ export const Button = forwardRef<ComponentRef<typeof Pressable>, ButtonProps>(
     return (
       <Pressable
         ref={ref}
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityRole="button"
         accessibilityState={{
           ...accessibilityState,

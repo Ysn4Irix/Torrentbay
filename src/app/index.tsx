@@ -17,11 +17,24 @@ export default function SplashScreen() {
 
   return (
     <Screen centered contentClassName="bg-background px-8">
-      <BrandMark size={88} />
+      <BrandMark size={96} />
 
-      <Text className="mt-5 text-center text-4xl font-bold text-content-primary">
-        <Text className="text-4xl font-bold text-content-primary">Torrent</Text>
-        <Text className="text-4xl font-bold text-primary">Bay</Text>
+      <Text
+        className="mt-5 text-center text-[40px] font-bold text-content-primary"
+        style={{ fontWeight: '700' }}
+      >
+        <Text
+          className="text-[40px] font-bold text-content-primary"
+          style={{ fontWeight: '700' }}
+        >
+          Torrent
+        </Text>
+        <Text
+          className="text-[40px] font-bold text-primary"
+          style={{ fontWeight: '700' }}
+        >
+          Bay
+        </Text>
       </Text>
       <Text className="mt-3 text-center text-base text-content-secondary">
         Public metadata search

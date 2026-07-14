@@ -36,6 +36,7 @@ import { Torrent } from '@/models/torrent';
 import { useFavoritesStore } from '@/store/favoritesStore';
 import { useSearchStore } from '@/store/searchStore';
 import { useSettingsStore } from '@/store/settingsStore';
+import { isMatureTorrent } from '@/utils/torrentMaturity';
 
 type PendingMagnetAction = 'open' | 'copy' | 'share' | null;
 
@@ -225,21 +226,37 @@ export default function TorrentDetailsScreen() {
   const magnetNoticeAcknowledged = useSettingsStore(
     (state) => state.magnetNoticeAcknowledged,
   );
+  const openProviderPagesExternally = useSettingsStore(
+    (state) => state.openProviderPagesExternally,
+  );
+  const showMatureCategories = useSettingsStore(
+    (state) => state.showMatureCategories,
+  );
   const acknowledgeMagnetNotice = useSettingsStore(
     (state) => state.acknowledgeMagnetNotice,
   );
   const currentStoreTorrent =
     searchResults.find((item) => item.id === id) ??
     favorites.find((item) => item.id === id);
+  const visibleStoreTorrent =
+    currentStoreTorrent &&
+    (showMatureCategories || !isMatureTorrent(currentStoreTorrent))
+      ? currentStoreTorrent
+      : undefined;
   const [torrentSnapshot, setTorrentSnapshot] = useState<Torrent | undefined>(
-    currentStoreTorrent,
+    visibleStoreTorrent,
   );
   const [pendingAction, setPendingAction] = useState<PendingMagnetAction>(null);
   const [overflowVisible, setOverflowVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
-  const torrent = currentStoreTorrent ?? torrentSnapshot;
+  const visibleTorrentSnapshot =
+    torrentSnapshot &&
+    (showMatureCategories || !isMatureTorrent(torrentSnapshot))
+      ? torrentSnapshot
+      : undefined;
+  const torrent = visibleStoreTorrent ?? visibleTorrentSnapshot;
 
   function showSnackbar(message: string) {
     setSnackbarMessage(message);
@@ -350,7 +367,9 @@ export default function TorrentDetailsScreen() {
   const isFavorite = favorites.some((item) => item.id === torrent.id);
   const health = deriveTorrentHealth(torrent.seeders);
   const canUseMagnet = Boolean(torrent.magnet);
-  const canOpenProvider = Boolean(torrent.detailsUrl);
+  const canOpenProvider = Boolean(
+    torrent.detailsUrl && openProviderPagesExternally,
+  );
 
   return (
     <View className="flex-1 bg-background">
@@ -471,6 +490,7 @@ export default function TorrentDetailsScreen() {
                   : 'Show more description'
               }
               accessibilityRole="button"
+              accessibilityState={{ expanded: descriptionExpanded }}
               className="mt-3 min-h-10 justify-center self-start rounded-md px-1 active:opacity-85"
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
               onPress={() => setDescriptionExpanded((expanded) => !expanded)}
@@ -512,7 +532,11 @@ export default function TorrentDetailsScreen() {
               variant="secondary"
             />
             <Button
-              accessibilityHint="Opens an external website in your browser."
+              accessibilityHint={
+                openProviderPagesExternally
+                  ? 'Opens an external website in your browser.'
+                  : 'Enable provider pages in Settings to open external provider links.'
+              }
               accessibilityLabel="Open provider page"
               disabled={!canOpenProvider}
               label="Open provider page"
@@ -563,6 +587,7 @@ export default function TorrentDetailsScreen() {
         >
           <Pressable
             accessibilityLabel="Dismiss torrent actions"
+            accessibilityRole="button"
             className="absolute inset-0"
             onPress={() => setOverflowVisible(false)}
           />
@@ -581,7 +606,11 @@ export default function TorrentDetailsScreen() {
                 variant="secondary"
               />
               <Button
-                accessibilityHint="Opens an external website in your browser."
+                accessibilityHint={
+                  openProviderPagesExternally
+                    ? 'Opens an external website in your browser.'
+                    : 'Enable provider pages in Settings to open external provider links.'
+                }
                 accessibilityLabel="Open provider page"
                 disabled={!canOpenProvider}
                 label="Open provider page"
